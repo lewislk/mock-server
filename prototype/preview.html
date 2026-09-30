@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mock 响应预览 - Mock Server</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            border: 'hsl(220 13% 91%)',
+            background: 'hsl(0 0% 100%)',
+            foreground: 'hsl(222 47% 11%)',
+            muted: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(215 16% 47%)' },
+            primary: { DEFAULT: 'hsl(222 47% 11%)', foreground: 'hsl(0 0% 100%)' },
+            accent: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(222 47% 11%)' },
+            destructive: { DEFAULT: 'hsl(0 84% 60%)', foreground: 'hsl(0 0% 100%)' },
+            success: 'hsl(142 71% 45%)',
+          },
+          borderRadius: { lg: '0.5rem', md: '0.375rem' },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.css" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    code, pre { font-family: "SF Mono", Monaco, Menlo, Consolas, "Courier New", monospace; }
+    [data-icon]::before { content: attr(data-icon); font-family: "lucide" !important; font-style: normal; }
+    .nav-item-active { background: hsl(222 47% 11%); color: white; }
+    .json-key { color: hsl(220 70% 50%); }
+    .json-string { color: hsl(14 80% 40%); }
+    .json-number { color: hsl(220 70% 40%); }
+    .json-bool { color: hsl(280 60% 45%); }
+    .json-null { color: hsl(0 0% 50%); }
+    .json-bracket { color: hsl(0 0% 30%); font-weight: 600; }
+    .editor { background: hsl(220 14% 96%); }
+    .header-pill { font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-foreground min-h-screen">
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside class="w-60 bg-background border-r border-border min-h-screen fixed left-0 top-0 flex flex-col">
+      <div class="px-6 py-5 border-b border-border">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">M</div>
+          <div>
+            <div class="font-semibold text-sm">Mock Server</div>
+            <div class="text-xs text-muted-foreground">内部测试平台</div>
+          </div>
+        </div>
+      </div>
+      <nav class="p-3 space-y-1 text-sm flex-1">
+        <a href="list.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe929;" class="text-base text-muted-foreground"></span>
+          <span>Mock 接口</span>
+          <span class="ml-auto text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">42</span>
+        </a>
+        <a href="converter.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6a8;" class="text-base text-muted-foreground"></span>
+          <span>JSON → Thrift</span>
+        </a>
+        <a href="settings.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe64e;" class="text-base text-muted-foreground"></span>
+          <span>全局配置</span>
+        </a>
+        <a href="preview.html" class="nav-item-active flex items-center gap-3 px-3 py-2 rounded-md">
+          <span data-icon="&#xe6c8;" class="text-base"></span>
+          <span>快速预览</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6b1;" class="text-base text-muted-foreground"></span>
+          <span>请求日志</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe72c;" class="text-base text-muted-foreground"></span>
+          <span>使用文档</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="ml-60 flex-1 min-h-screen">
+      <header class="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex items-center gap-4">
+        <div class="text-sm text-muted-foreground">
+          <span>快速预览</span>
+        </div>
+      </header>
+
+      <div class="p-8 max-w-6xl">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h1 class="text-2xl font-semibold">Mock 响应预览</h1>
+            <p class="text-sm text-muted-foreground mt-1">测试 mock 接口的实际响应，验证模板与配置</p>
+          </div>
+        </div>
+
+        <!-- Request builder -->
+        <section class="bg-background border border-border rounded-lg mb-6">
+          <div class="px-5 py-3 border-b border-border">
+            <h2 class="font-medium">请求构造</h2>
+          </div>
+          <div class="p-5 space-y-4">
+            <!-- Method + URL -->
+            <div class="flex items-stretch gap-2">
+              <select class="px-3 py-2 border border-border rounded-md text-sm font-mono bg-muted">
+                <option>GET</option>
+                <option selected>POST</option>
+              </select>
+              <div class="flex-1 flex items-center px-3 py-2 border border-border rounded-md bg-muted font-mono text-sm">
+                <span class="text-muted-foreground">http://localhost:3000/mock/</span>
+                <select class="bg-transparent font-mono text-sm focus:outline-none flex-1">
+                  <option>user-list</option>
+                  <option selected>user-detail</option>
+                  <option>user-login</option>
+                  <option>product-list</option>
+                  <option>order-create</option>
+                  <option>dashboard-stats</option>
+                  <option>error-500</option>
+                </select>
+              </div>
+              <button class="px-5 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 inline-flex items-center gap-2">
+                <span data-icon="&#xe6c8;"></span>
+                发送
+              </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="border-b border-border flex items-center gap-1 -mx-5 px-5">
+              <button class="px-4 py-2 text-sm border-b-2 border-primary -mb-px">Params</button>
+              <button class="px-4 py-2 text-sm text-muted-foreground border-b-2 border-transparent -mb-px">Headers (2)</button>
+              <button class="px-4 py-2 text-sm text-muted-foreground border-b-2 border-transparent -mb-px">Body</button>
+            </div>
+
+            <!-- Params -->
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <input type="checkbox" class="rounded" />
+                <input type="text" value="id" class="px-2 py-1.5 border border-border rounded text-xs font-mono w-32" />
+                <input type="text" value="12345" class="flex-1 px-2 py-1.5 border border-border rounded text-xs font-mono" />
+                <button class="p-1 text-muted-foreground hover:text-destructive"><span data-icon="&#xe74b;"></span></button>
+              </div>
+              <div class="flex items-center gap-2">
+                <input type="checkbox" class="rounded" />
+                <input type="text" value="include" class="px-2 py-1.5 border border-border rounded text-xs font-mono w-32" />
+                <input type="text" value="addresses" class="flex-1 px-2 py-1.5 border border-border rounded text-xs font-mono" />
+                <button class="p-1 text-muted-foreground hover:text-destructive"><span data-icon="&#xe74b;"></span></button>
+              </div>
+              <button class="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1 mt-1">
+                <span data-icon="&#xe8a4;"></span>
+                添加参数
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Response -->
+        <section class="bg-background border border-border rounded-lg">
+          <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+            <h2 class="font-medium">响应</h2>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-success/10 text-success rounded">
+                <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                200 OK
+              </span>
+              <span class="text-muted-foreground">耗时 <strong class="text-foreground">12ms</strong></span>
+              <span class="text-muted-foreground">大小 <strong class="text-foreground">387 B</strong></span>
+              <button class="px-2 py-1 border border-border rounded hover:bg-accent inline-flex items-center gap-1">
+                <span data-icon="&#xe6f4;"></span>
+                复制
+              </button>
+              <button class="px-2 py-1 border border-border rounded hover:bg-accent inline-flex items-center gap-1">
+                <span data-icon="&#xe709;"></span>
+                下载
+              </button>
+            </div>
+          </div>
+
+          <div class="border-b border-border flex items-center gap-1 px-5">
+            <button class="px-4 py-2 text-sm border-b-2 border-primary -mb-px">Body</button>
+            <button class="px-4 py-2 text-sm text-muted-foreground border-b-2 border-transparent -mb-px">Headers (5)</button>
+          </div>
+
+          <!-- Headers summary -->
+          <div class="px-5 py-2 text-xs flex items-center gap-3 border-b border-border bg-muted/50">
+            <span class="header-pill bg-blue-50 text-blue-700">application/json; charset=utf-8</span>
+            <span class="header-pill bg-muted text-muted-foreground font-mono">x-request-id: a3f9c1d2</span>
+            <span class="header-pill bg-muted text-muted-foreground font-mono">x-mock-engine: mockjs@1.9.0</span>
+            <span class="header-pill bg-muted text-muted-foreground font-mono">x-render-duration-ms: 12</span>
+          </div>
+
+          <!-- Response body -->
+          <div class="p-5">
+            <pre class="editor text-xs p-4 rounded border border-border overflow-auto"><code><span class="json-bracket">{</span>
+  <span class="json-key">"code"</span>: <span class="json-number">200</span>,
+  <span class="json-key">"message"</span>: <span class="json-string">"success"</span>,
+  <span class="json-key">"data"</span>: <span class="json-bracket">{</span>
+    <span class="json-key">"id"</span>: <span class="json-string">"a3f9c1d2-7b8e-4f0a-9c1d-2e3f4a5b6c7d"</span>,
+    <span class="json-key">"username"</span>: <span class="json-string">"uXk9pL2v"</span>,
+    <span class="json-key">"nickname"</span>: <span class="json-string">"李建国"</span>,
+    <span class="json-key">"email"</span>: <span class="json-string">"jianguo.li@example.com"</span>,
+    <span class="json-key">"age"</span>: <span class="json-number">34</span>,
+    <span class="json-key">"avatar"</span>: <span class="json-string">"http://dummyimage.com/200x200/4A90E2/fff.png&text=avatar"</span>,
+    <span class="json-key">"createdAt"</span>: <span class="json-string">"2026-09-30 11:42:18"</span>,
+    <span class="json-key">"addresses"</span>: <span class="json-bracket">[</span>
+      <span class="json-bracket">{</span>
+        <span class="json-key">"province"</span>: <span class="json-string">"广东省"</span>,
+        <span class="json-key">"city"</span>: <span class="json-string">"深圳市"</span>,
+        <span class="json-key">"detail"</span>: <span class="json-string">"南山区科技园路 88 号 3 栋 1502 室"</span>
+      <span class="json-bracket">}</span>,
+      <span class="json-bracket">{</span>
+        <span class="json-key">"province"</span>: <span class="json-string">"北京市"</span>,
+        <span class="json-key">"city"</span>: <span class="json-string">"海淀区"</span>,
+        <span class="json-key">"detail"</span>: <span class="json-string">"中关村大街 1 号 5 号楼"</span>
+      <span class="json-bracket">}</span>
+    <span class="json-bracket">]</span>
+  <span class="json-bracket">}</span>
+<span class="json-bracket">}</span></code></pre>
+          </div>
+        </section>
+
+        <!-- Comparison -->
+        <section class="bg-background border border-border rounded-lg mt-6">
+          <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+            <h2 class="font-medium">历史响应（最近 5 次）</h2>
+            <span class="text-xs text-muted-foreground">每次请求占位符值都不同</span>
+          </div>
+          <div class="divide-y divide-border">
+            <div class="px-5 py-3 flex items-center gap-4 text-xs">
+              <span class="text-muted-foreground w-32">11:42:18</span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-50 text-green-700 rounded">POST</span>
+              <span class="inline-flex items-center gap-1 text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>200</span>
+              <span class="text-muted-foreground">12 ms</span>
+              <code class="text-xs font-mono text-muted-foreground truncate flex-1">"id":"a3f9c1d2-7b8e...","nickname":"李建国","addresses":[…2 items]</code>
+              <button class="text-muted-foreground hover:text-foreground text-xs">查看</button>
+            </div>
+            <div class="px-5 py-3 flex items-center gap-4 text-xs">
+              <span class="text-muted-foreground w-32">11:41:55</span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-50 text-green-700 rounded">POST</span>
+              <span class="inline-flex items-center gap-1 text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>200</span>
+              <span class="text-muted-foreground">9 ms</span>
+              <code class="text-xs font-mono text-muted-foreground truncate flex-1">"id":"b7e2d4f8-...","nickname":"王芳","addresses":[…2 items]</code>
+              <button class="text-muted-foreground hover:text-foreground text-xs">查看</button>
+            </div>
+            <div class="px-5 py-3 flex items-center gap-4 text-xs">
+              <span class="text-muted-foreground w-32">11:41:32</span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">GET</span>
+              <span class="inline-flex items-center gap-1 text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>200</span>
+              <span class="text-muted-foreground">11 ms</span>
+              <code class="text-xs font-mono text-muted-foreground truncate flex-1">"id":"d5a8b3c1-...","nickname":"陈志强","addresses":[…2 items]</code>
+              <button class="text-muted-foreground hover:text-foreground text-xs">查看</button>
+            </div>
+            <div class="px-5 py-3 flex items-center gap-4 text-xs">
+              <span class="text-muted-foreground w-32">11:41:01</span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-50 text-green-700 rounded">POST</span>
+              <span class="inline-flex items-center gap-1 text-destructive"><span class="w-1.5 h-1.5 rounded-full bg-destructive"></span>500</span>
+              <span class="text-muted-foreground">3 ms</span>
+              <code class="text-xs font-mono text-muted-foreground truncate flex-1">"code":500,"message":"Mock error"</code>
+              <span class="text-xs text-warning">命中 10% 错误率</span>
+              <button class="text-muted-foreground hover:text-foreground text-xs">查看</button>
+            </div>
+            <div class="px-5 py-3 flex items-center gap-4 text-xs">
+              <span class="text-muted-foreground w-32">11:40:48</span>
+              <span class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">GET</span>
+              <span class="inline-flex items-center gap-1 text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>200</span>
+              <span class="text-muted-foreground">14 ms</span>
+              <code class="text-xs font-mono text-muted-foreground truncate flex-1">"id":"f2c7e9b4-...","nickname":"刘洋","addresses":[…2 items]</code>
+              <button class="text-muted-foreground hover:text-foreground text-xs">查看</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

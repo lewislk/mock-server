@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    "PingFang SC",
+    "Microsoft YaHei",
+    sans-serif;
+}
+
+code,
+pre {
+  font-family:
+    "SF Mono",
+    Monaco,
+    Menlo,
+    Consolas,
+    "Courier New",
+    monospace;
+}
+
+/* 编辑器风格：浅灰背景，区别于表单输入框 */
+.editor {
+  background-color: hsl(220 14% 96%);
+}
+
+/* JSON 高亮（用于预览区域） */
+.json-key {
+  color: hsl(220 70% 50%);
+}
+.json-string {
+  color: hsl(14 80% 40%);
+}
+.json-number {
+  color: hsl(220 70% 40%);
+}
+.json-bool {
+  color: hsl(280 60% 45%);
+}
+.json-null {
+  color: hsl(0 0% 50%);
+}
+.json-bracket {
+  color: hsl(0 0% 30%);
+  font-weight: 600;
+}
+
+/* 占位符标签：JSON 中标注 Mock.js 占位符 */
+.placeholder-tag {
+  background-color: hsl(48 96% 89%);
+  color: hsl(26 83% 14%);
+  padding: 0 3px;
+  border-radius: 3px;
+  font-family: "SF Mono", monospace;
+  font-size: 12px;
+}
+
+/* 自定义滚动条（在编辑器、预览区域使用） */
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: hsl(220 13% 80%);
+  border-radius: 3px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}

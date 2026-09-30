@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mock 接口管理 - Mock Server</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            border: 'hsl(220 13% 91%)',
+            background: 'hsl(0 0% 100%)',
+            foreground: 'hsl(222 47% 11%)',
+            muted: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(215 16% 47%)' },
+            primary: { DEFAULT: 'hsl(222 47% 11%)', foreground: 'hsl(0 0% 100%)' },
+            accent: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(222 47% 11%)' },
+            destructive: { DEFAULT: 'hsl(0 84% 60%)', foreground: 'hsl(0 0% 100%)' },
+            success: 'hsl(142 71% 45%)',
+            warning: 'hsl(38 92% 50%)',
+          },
+          borderRadius: { lg: '0.5rem', md: '0.375rem' },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.css" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    code, pre { font-family: "SF Mono", Monaco, Menlo, Consolas, "Courier New", monospace; }
+    [data-icon]::before { content: attr(data-icon); font-family: "lucide" !important; font-style: normal; }
+    .nav-item-active { background: hsl(222 47% 11%); color: white; }
+    .nav-item-active [data-icon]::before { color: white; }
+    .keyword { background: hsl(48 96% 89%); color: hsl(26 83% 14%); padding: 0 2px; border-radius: 2px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-foreground min-h-screen">
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside class="w-60 bg-background border-r border-border min-h-screen fixed left-0 top-0 flex flex-col">
+      <div class="px-6 py-5 border-b border-border">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">M</div>
+          <div>
+            <div class="font-semibold text-sm">Mock Server</div>
+            <div class="text-xs text-muted-foreground">内部测试平台</div>
+          </div>
+        </div>
+      </div>
+      <nav class="p-3 space-y-1 text-sm flex-1">
+        <a href="list.html" class="nav-item-active flex items-center gap-3 px-3 py-2 rounded-md">
+          <span data-icon="&#xe929;" class="text-base"></span>
+          <span>Mock 接口</span>
+          <span class="ml-auto text-xs bg-slate-700 px-1.5 py-0.5 rounded">42</span>
+        </a>
+        <a href="converter.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6a8;" class="text-base text-muted-foreground"></span>
+          <span>JSON → Thrift</span>
+        </a>
+        <a href="settings.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe64e;" class="text-base text-muted-foreground"></span>
+          <span>全局配置</span>
+        </a>
+        <a href="preview.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6c8;" class="text-base text-muted-foreground"></span>
+          <span>快速预览</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6b1;" class="text-base text-muted-foreground"></span>
+          <span>请求日志</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe72c;" class="text-base text-muted-foreground"></span>
+          <span>使用文档</span>
+        </a>
+      </nav>
+      <div class="p-3 border-t border-border text-xs text-muted-foreground">
+        <div class="px-3 py-2">
+          <div>v0.1.0 · 内部预览版</div>
+          <div class="mt-1">运行中 <span class="inline-block w-2 h-2 rounded-full bg-success align-middle"></span></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="ml-60 flex-1 min-h-screen">
+      <div class="p-8 max-w-7xl">
+        <!-- Page header -->
+        <div class="flex items-start justify-between mb-6">
+          <div>
+            <h1 class="text-2xl font-semibold">Mock 接口管理</h1>
+            <p class="text-sm text-muted-foreground mt-1">管理和维护所有 Mock 接口，命中 <code class="text-xs bg-muted px-1.5 py-0.5 rounded">/mock/{identifier}</code> 的请求</p>
+          </div>
+          <a href="edit.html" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90">
+            <span data-icon="&#xe8a4;"></span>
+            新建 Mock 接口
+          </a>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="grid grid-cols-4 gap-4 mb-6">
+          <div class="bg-background border border-border rounded-lg p-4">
+            <div class="text-xs text-muted-foreground">接口总数</div>
+            <div class="text-2xl font-semibold mt-1">42</div>
+          </div>
+          <div class="bg-background border border-border rounded-lg p-4">
+            <div class="text-xs text-muted-foreground">已启用</div>
+            <div class="text-2xl font-semibold mt-1 text-success">38</div>
+          </div>
+          <div class="bg-background border border-border rounded-lg p-4">
+            <div class="text-xs text-muted-foreground">已禁用</div>
+            <div class="text-2xl font-semibold mt-1 text-muted-foreground">4</div>
+          </div>
+          <div class="bg-background border border-border rounded-lg p-4">
+            <div class="text-xs text-muted-foreground">今日请求</div>
+            <div class="text-2xl font-semibold mt-1">1,287</div>
+            <div class="text-xs text-success mt-1">↑ 12% 较昨日</div>
+          </div>
+        </div>
+
+        <!-- Tabs + filters + search -->
+        <div class="bg-background border border-border rounded-lg">
+          <!-- 搜索栏 -->
+          <div class="px-4 py-3 border-b border-border flex items-center gap-3">
+            <div class="relative flex-1 max-w-md">
+              <span data-icon="&#xe922;" class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"></span>
+              <input
+                type="text"
+                placeholder="按名称、唯一标识或描述搜索…"
+                value="用户"
+                class="w-full pl-10 pr-4 py-2 bg-muted border border-transparent focus:bg-background focus:border-border focus:outline-none rounded-md text-sm"
+              />
+            </div>
+            <span class="ml-auto text-xs text-muted-foreground">命中 3 / 共 42 条</span>
+          </div>
+          <div class="border-b border-border px-4 flex items-center gap-1">
+            <button class="px-4 py-3 text-sm font-medium border-b-2 border-primary -mb-px">全部 <span class="text-muted-foreground ml-1">42</span></button>
+            <button class="px-4 py-3 text-sm text-muted-foreground hover:text-foreground border-b-2 border-transparent -mb-px">已启用 <span class="text-muted-foreground ml-1">38</span></button>
+            <button class="px-4 py-3 text-sm text-muted-foreground hover:text-foreground border-b-2 border-transparent -mb-px">已禁用 <span class="text-muted-foreground ml-1">4</span></button>
+          </div>
+
+          <!-- Table -->
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-muted-foreground border-b border-border">
+                <th class="px-4 py-3 font-medium">接口名称</th>
+                <th class="px-4 py-3 font-medium">唯一标识</th>
+                <th class="px-4 py-3 font-medium">状态</th>
+                <th class="px-4 py-3 font-medium">最近请求</th>
+                <th class="px-4 py-3 font-medium">更新时间</th>
+                <th class="px-4 py-3 font-medium w-32">操作</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              <tr class="hover:bg-muted/50">
+                <td class="px-4 py-3">
+                  <div class="font-medium"><span class="keyword">用户</span>列表</div>
+                  <div class="text-xs text-muted-foreground mt-0.5">分页返回<span class="keyword">用户</span>基本信息列表</div>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs">/mock/<span class="keyword">user</span>-list</td>
+                <td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-xs text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>启用</span></td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">2 分钟前</td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">2026-09-30 10:24</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-1">
+                    <button class="p-1.5 hover:bg-accent rounded" title="预览"><span data-icon="&#xe6c8;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded" title="编辑"><span data-icon="&#xe70e;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded" title="复制标识"><span data-icon="&#xe6f4;"></span></button>
+                    <button class="p-1.5 hover:bg-destructive/10 text-destructive rounded" title="删除"><span data-icon="&#xe74b;"></span></button>
+                  </div>
+                </td>
+              </tr>
+              <tr class="hover:bg-muted/50">
+                <td class="px-4 py-3">
+                  <div class="font-medium"><span class="keyword">用户</span>登录</div>
+                  <div class="text-xs text-muted-foreground mt-0.5">账号密码登录，返 token</div>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs">/mock/<span class="keyword">user</span>-login</td>
+                <td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-xs text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>启用</span></td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">15 分钟前</td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">2026-09-30 09:55</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-1">
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6c8;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe70e;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6f4;"></span></button>
+                    <button class="p-1.5 hover:bg-destructive/10 text-destructive rounded"><span data-icon="&#xe74b;"></span></button>
+                  </div>
+                </td>
+              </tr>
+              <tr class="hover:bg-muted/50">
+                <td class="px-4 py-3">
+                  <div class="font-medium"><span class="keyword">用户</span>详情</div>
+                  <div class="text-xs text-muted-foreground mt-0.5">根据 ID 获取<span class="keyword">用户</span>完整信息</div>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs">/mock/<span class="keyword">user</span>-detail</td>
+                <td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-xs text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>启用</span></td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">1 小时前</td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">2026-09-30 08:12</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-1">
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6c8;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe70e;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6f4;"></span></button>
+                    <button class="p-1.5 hover:bg-destructive/10 text-destructive rounded"><span data-icon="&#xe74b;"></span></button>
+                  </div>
+                </td>
+              </tr>
+              <tr class="hover:bg-muted/50">
+                <td class="px-4 py-3">
+                  <div class="font-medium">商品列表</div>
+                  <div class="text-xs text-muted-foreground mt-0.5">商品分页列表，支持筛选</div>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs">/mock/product-list</td>
+                <td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-xs text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>启用</span></td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">3 小时前</td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">2026-09-29 19:42</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-1">
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6c8;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe70e;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6f4;"></span></button>
+                    <button class="p-1.5 hover:bg-destructive/10 text-destructive rounded"><span data-icon="&#xe74b;"></span></button>
+                  </div>
+                </td>
+              </tr>
+              <tr class="hover:bg-muted/50">
+                <td class="px-4 py-3">
+                  <div class="font-medium">订单创建</div>
+                  <div class="text-xs text-muted-foreground mt-0.5">提交订单，返回订单详情</div>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs">/mock/order-create</td>
+                <td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-xs text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>启用</span></td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">5 小时前</td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">2026-09-29 16:08</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-1">
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6c8;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe70e;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6f4;"></span></button>
+                    <button class="p-1.5 hover:bg-destructive/10 text-destructive rounded"><span data-icon="&#xe74b;"></span></button>
+                  </div>
+                </td>
+              </tr>
+              <tr class="hover:bg-muted/50">
+                <td class="px-4 py-3">
+                  <div class="font-medium">仪表盘统计</div>
+                  <div class="text-xs text-muted-foreground mt-0.5">返回各类业务指标聚合数据</div>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs">/mock/dashboard-stats</td>
+                <td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-xs text-muted-foreground"><span class="w-1.5 h-1.5 rounded-full bg-muted"></span>禁用</span></td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">3 天前</td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">2026-09-27 14:30</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-1">
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6c8;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe70e;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6f4;"></span></button>
+                    <button class="p-1.5 hover:bg-destructive/10 text-destructive rounded"><span data-icon="&#xe74b;"></span></button>
+                  </div>
+                </td>
+              </tr>
+              <tr class="hover:bg-muted/50">
+                <td class="px-4 py-3">
+                  <div class="font-medium">错误响应示例</div>
+                  <div class="text-xs text-muted-foreground mt-0.5">固定返回 500，用于前端错误处理测试</div>
+                </td>
+                <td class="px-4 py-3 font-mono text-xs">/mock/error-500</td>
+                <td class="px-4 py-3"><span class="inline-flex items-center gap-1 text-xs text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>启用</span></td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">5 天前</td>
+                <td class="px-4 py-3 text-muted-foreground text-xs">2026-09-25 11:00</td>
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-1">
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6c8;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe70e;"></span></button>
+                    <button class="p-1.5 hover:bg-accent rounded"><span data-icon="&#xe6f4;"></span></button>
+                    <button class="p-1.5 hover:bg-destructive/10 text-destructive rounded"><span data-icon="&#xe74b;"></span></button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <!-- Pagination -->
+          <div class="border-t border-border px-4 py-3 flex items-center justify-between text-sm">
+            <div class="text-muted-foreground">显示 1 - 7 条，共 42 条</div>
+            <div class="flex items-center gap-1">
+              <button class="px-3 py-1.5 rounded border border-border bg-background hover:bg-accent text-muted-foreground" disabled>上一页</button>
+              <button class="px-3 py-1.5 rounded bg-primary text-primary-foreground">1</button>
+              <button class="px-3 py-1.5 rounded hover:bg-accent">2</button>
+              <button class="px-3 py-1.5 rounded hover:bg-accent">3</button>
+              <span class="px-2 text-muted-foreground">…</span>
+              <button class="px-3 py-1.5 rounded hover:bg-accent">6</button>
+              <button class="px-3 py-1.5 rounded border border-border bg-background hover:bg-accent">下一页</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

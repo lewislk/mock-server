@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>全局配置 - Mock Server</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            border: 'hsl(220 13% 91%)',
+            background: 'hsl(0 0% 100%)',
+            foreground: 'hsl(222 47% 11%)',
+            muted: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(215 16% 47%)' },
+            primary: { DEFAULT: 'hsl(222 47% 11%)', foreground: 'hsl(0 0% 100%)' },
+            accent: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(222 47% 11%)' },
+            destructive: { DEFAULT: 'hsl(0 84% 60%)', foreground: 'hsl(0 0% 100%)' },
+            success: 'hsl(142 71% 45%)',
+            warning: 'hsl(38 92% 50%)',
+          },
+          borderRadius: { lg: '0.5rem', md: '0.375rem' },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.css" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    code, pre { font-family: "SF Mono", Monaco, Menlo, Consolas, "Courier New", monospace; }
+    [data-icon]::before { content: attr(data-icon); font-family: "lucide" !important; font-style: normal; }
+    .nav-item-active { background: hsl(222 47% 11%); color: white; }
+    .toggle { width: 36px; height: 20px; background: hsl(220 13% 91%); border-radius: 999px; position: relative; cursor: pointer; transition: background 0.2s; }
+    .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .toggle-on { background: hsl(222 47% 11%); }
+    .toggle-on::after { transform: translateX(16px); }
+  </style>
+</head>
+<body class="bg-slate-50 text-foreground min-h-screen">
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside class="w-60 bg-background border-r border-border min-h-screen fixed left-0 top-0 flex flex-col">
+      <div class="px-6 py-5 border-b border-border">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">M</div>
+          <div>
+            <div class="font-semibold text-sm">Mock Server</div>
+            <div class="text-xs text-muted-foreground">内部测试平台</div>
+          </div>
+        </div>
+      </div>
+      <nav class="p-3 space-y-1 text-sm flex-1">
+        <a href="list.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe929;" class="text-base text-muted-foreground"></span>
+          <span>Mock 接口</span>
+          <span class="ml-auto text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">42</span>
+        </a>
+        <a href="converter.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6a8;" class="text-base text-muted-foreground"></span>
+          <span>JSON → Thrift</span>
+        </a>
+        <a href="settings.html" class="nav-item-active flex items-center gap-3 px-3 py-2 rounded-md">
+          <span data-icon="&#xe64e;" class="text-base"></span>
+          <span>全局配置</span>
+        </a>
+        <a href="preview.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6c8;" class="text-base text-muted-foreground"></span>
+          <span>快速预览</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6b1;" class="text-base text-muted-foreground"></span>
+          <span>请求日志</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe72c;" class="text-base text-muted-foreground"></span>
+          <span>使用文档</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="ml-60 flex-1 min-h-screen">
+      <header class="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex items-center gap-4">
+        <div class="text-sm text-muted-foreground">
+          <span>全局配置</span>
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <button class="px-3 py-1.5 text-sm rounded border border-border hover:bg-accent">恢复默认</button>
+          <button class="px-3 py-1.5 text-sm rounded bg-primary text-primary-foreground hover:opacity-90">保存</button>
+        </div>
+      </header>
+
+      <div class="p-8 max-w-4xl">
+        <div class="mb-6">
+          <h1 class="text-2xl font-semibold">全局配置</h1>
+          <p class="text-sm text-muted-foreground mt-1">影响所有 Mock 接口的默认值，修改后立即生效</p>
+        </div>
+
+        <!-- Mock 引擎配置 -->
+        <section class="bg-background border border-border rounded-lg mb-6">
+          <div class="px-5 py-3 border-b border-border">
+            <h2 class="font-medium">Mock 引擎</h2>
+            <p class="text-xs text-muted-foreground mt-0.5">Mock.js 的运行时配置</p>
+          </div>
+          <div class="p-5 space-y-5">
+            <!-- 数组默认长度 -->
+            <div class="flex items-start gap-6">
+              <div class="w-44 flex-shrink-0">
+                <div class="text-sm font-medium">数组默认长度</div>
+                <div class="text-xs text-muted-foreground mt-0.5">未覆盖接口的数组字段生成的项数</div>
+              </div>
+              <div class="flex-1 max-w-md">
+                <div class="flex items-center gap-3">
+                  <input type="number" value="3" min="1" max="100" class="w-24 px-3 py-2 border border-border rounded-md text-sm font-mono" />
+                  <span class="text-sm text-muted-foreground">项</span>
+                  <span class="ml-auto text-xs text-muted-foreground">范围：1 - 100</span>
+                </div>
+                <div class="mt-2 flex items-center gap-1 text-xs">
+                  <div class="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div class="h-full bg-primary" style="width: 3%"></div>
+                  </div>
+                  <span class="text-muted-foreground">3%</span>
+                </div>
+                <div class="mt-2 text-xs text-muted-foreground">
+                  当前有 <strong class="text-foreground">6 个接口</strong> 显式设置了数组长度覆盖，会忽略此值
+                </div>
+              </div>
+            </div>
+
+            <!-- Mock.js 区域 -->
+            <div class="flex items-start gap-6 pt-5 border-t border-border">
+              <div class="w-44 flex-shrink-0">
+                <div class="text-sm font-medium">Mock.js 区域</div>
+                <div class="text-xs text-muted-foreground mt-0.5">影响 <code class="text-xs">@cname</code> 等占位符的输出</div>
+              </div>
+              <div class="flex-1 max-w-md">
+                <select class="w-full px-3 py-2 border border-border rounded-md text-sm bg-background">
+                  <option value="zh-cn" selected>zh-cn — 简体中文（默认）</option>
+                  <option value="en">en — 英文</option>
+                </select>
+                <div class="mt-2 text-xs text-muted-foreground">修改后新生成的 mock 数据将使用对应区域的随机词库</div>
+              </div>
+            </div>
+
+            <!-- 错误模拟总开关 -->
+            <div class="flex items-start gap-6 pt-5 border-t border-border">
+              <div class="w-44 flex-shrink-0">
+                <div class="text-sm font-medium">启用错误模拟</div>
+                <div class="text-xs text-muted-foreground mt-0.5">关闭后所有接口的错误率配置失效</div>
+              </div>
+              <div class="flex-1 max-w-md">
+                <div class="flex items-center gap-3">
+                  <div class="toggle toggle-on"></div>
+                  <span class="text-sm">已启用</span>
+                </div>
+                <div class="mt-2 text-xs text-muted-foreground">当前有 <strong class="text-foreground">3 个接口</strong> 配置了错误率</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 日志配置 -->
+        <section class="bg-background border border-border rounded-lg mb-6">
+          <div class="px-5 py-3 border-b border-border">
+            <h2 class="font-medium">请求日志</h2>
+            <p class="text-xs text-muted-foreground mt-0.5">mock 接口被调用时的记录策略</p>
+          </div>
+          <div class="p-5 space-y-5">
+            <div class="flex items-start gap-6">
+              <div class="w-44 flex-shrink-0">
+                <div class="text-sm font-medium">启用请求日志</div>
+                <div class="text-xs text-muted-foreground mt-0.5">记录每次 mock 接口调用</div>
+              </div>
+              <div class="flex-1 max-w-md">
+                <div class="flex items-center gap-3">
+                  <div class="toggle toggle-on"></div>
+                  <span class="text-sm">已启用</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-start gap-6 pt-5 border-t border-border">
+              <div class="w-44 flex-shrink-0">
+                <div class="text-sm font-medium">日志保留天数</div>
+                <div class="text-xs text-muted-foreground mt-0.5">定时任务每天清理过期日志</div>
+              </div>
+              <div class="flex-1 max-w-md">
+                <div class="flex items-center gap-3">
+                  <input type="number" value="7" min="1" max="90" class="w-24 px-3 py-2 border border-border rounded-md text-sm font-mono" />
+                  <span class="text-sm text-muted-foreground">天</span>
+                </div>
+                <div class="mt-2 text-xs text-muted-foreground">当前已记录 <strong class="text-foreground">9,247</strong> 条，占用约 <strong class="text-foreground">3.2 MB</strong></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 系统信息 -->
+        <section class="bg-background border border-border rounded-lg">
+          <div class="px-5 py-3 border-b border-border">
+            <h2 class="font-medium">系统信息</h2>
+          </div>
+          <div class="p-5">
+            <table class="w-full text-sm">
+              <tbody class="divide-y divide-border">
+                <tr>
+                  <td class="py-2.5 text-muted-foreground w-44">版本</td>
+                  <td class="py-2.5 font-mono text-xs">v0.1.0 (build 20260930-rc1)</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 text-muted-foreground">运行时</td>
+                  <td class="py-2.5 font-mono text-xs">Node.js v20.10.0 / Next.js 14.2.5</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 text-muted-foreground">数据库</td>
+                  <td class="py-2.5 font-mono text-xs flex items-center gap-2">
+                    MySQL 8.0.36
+                    <span class="inline-flex items-center gap-1 text-xs text-success">
+                      <span class="w-1.5 h-1.5 rounded-full bg-success"></span>已连接
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 text-muted-foreground">Mock 引擎</td>
+                  <td class="py-2.5 font-mono text-xs">Mock.js 1.1.0</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 text-muted-foreground">部署模式</td>
+                  <td class="py-2.5 font-mono text-xs">单实例 · Docker Compose</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 text-muted-foreground">监听地址</td>
+                  <td class="py-2.5 font-mono text-xs">0.0.0.0:3000</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 text-muted-foreground">最近启动</td>
+                  <td class="py-2.5 text-xs">2026-09-30 08:00:12 · 已运行 3 小时 45 分钟</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Danger zone -->
+        <section class="bg-background border border-destructive/40 rounded-lg mt-6">
+          <div class="px-5 py-3 border-b border-destructive/40">
+            <h2 class="font-medium text-destructive">危险操作</h2>
+          </div>
+          <div class="p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm font-medium">清理所有请求日志</div>
+                <div class="text-xs text-muted-foreground mt-0.5">立即清空 mock_request_log 表，不会影响接口定义</div>
+              </div>
+              <button class="px-3 py-1.5 text-sm border border-destructive/40 text-destructive rounded-md hover:bg-destructive/10">清理日志</button>
+            </div>
+            <div class="flex items-center justify-between pt-4 border-t border-border">
+              <div>
+                <div class="text-sm font-medium">重置全部 Mock 接口</div>
+                <div class="text-xs text-muted-foreground mt-0.5">删除所有 mock_interface 记录，操作不可恢复</div>
+              </div>
+              <button class="px-3 py-1.5 text-sm border border-destructive/40 text-destructive rounded-md hover:bg-destructive/10">重置接口</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

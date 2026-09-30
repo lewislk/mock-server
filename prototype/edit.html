@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>编辑 Mock 接口 - Mock Server</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            border: 'hsl(220 13% 91%)',
+            background: 'hsl(0 0% 100%)',
+            foreground: 'hsl(222 47% 11%)',
+            muted: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(215 16% 47%)' },
+            primary: { DEFAULT: 'hsl(222 47% 11%)', foreground: 'hsl(0 0% 100%)' },
+            accent: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(222 47% 11%)' },
+            destructive: { DEFAULT: 'hsl(0 84% 60%)', foreground: 'hsl(0 0% 100%)' },
+            success: 'hsl(142 71% 45%)',
+            warning: 'hsl(38 92% 50%)',
+          },
+          borderRadius: { lg: '0.5rem', md: '0.375rem' },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.css" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    code, pre { font-family: "SF Mono", Monaco, Menlo, Consolas, "Courier New", monospace; }
+    [data-icon]::before { content: attr(data-icon); font-family: "lucide" !important; font-style: normal; }
+    .nav-item-active { background: hsl(222 47% 11%); color: white; }
+    .json-key { color: hsl(220 70% 50%); }
+    .json-string { color: hsl(14 80% 40%); }
+    .json-number { color: hsl(220 70% 40%); }
+    .json-bool { color: hsl(280 60% 45%); }
+    .json-null { color: hsl(0 0% 50%); }
+    .placeholder { background: hsl(48 96% 89%); color: hsl(26 83% 14%); padding: 0 3px; border-radius: 3px; font-family: "SF Mono", monospace; font-size: 12px; }
+    .placeholder-warn { background: hsl(0 86% 92%); color: hsl(0 70% 35%); text-decoration: underline wavy hsl(0 84% 60%); }
+    .editor { background: hsl(220 14% 96%); }
+  </style>
+</head>
+<body class="bg-slate-50 text-foreground min-h-screen">
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside class="w-60 bg-background border-r border-border min-h-screen fixed left-0 top-0 flex flex-col">
+      <div class="px-6 py-5 border-b border-border">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">M</div>
+          <div>
+            <div class="font-semibold text-sm">Mock Server</div>
+            <div class="text-xs text-muted-foreground">内部测试平台</div>
+          </div>
+        </div>
+      </div>
+      <nav class="p-3 space-y-1 text-sm flex-1">
+        <a href="list.html" class="nav-item-active flex items-center gap-3 px-3 py-2 rounded-md">
+          <span data-icon="&#xe929;" class="text-base"></span>
+          <span>Mock 接口</span>
+          <span class="ml-auto text-xs bg-slate-700 px-1.5 py-0.5 rounded">42</span>
+        </a>
+        <a href="converter.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6a8;" class="text-base text-muted-foreground"></span>
+          <span>JSON → Thrift</span>
+        </a>
+        <a href="settings.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe64e;" class="text-base text-muted-foreground"></span>
+          <span>全局配置</span>
+        </a>
+        <a href="preview.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6c8;" class="text-base text-muted-foreground"></span>
+          <span>快速预览</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6b1;" class="text-base text-muted-foreground"></span>
+          <span>请求日志</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe72c;" class="text-base text-muted-foreground"></span>
+          <span>使用文档</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="ml-60 flex-1 min-h-screen">
+      <!-- Top bar -->
+      <header class="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex items-center gap-4">
+        <div class="flex items-center gap-2 text-sm text-muted-foreground">
+          <a href="list.html" class="hover:text-foreground">Mock 接口</a>
+          <span>/</span>
+          <span class="text-foreground">编辑</span>
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <button class="px-3 py-1.5 text-sm rounded border border-border hover:bg-accent">取消</button>
+          <button class="px-3 py-1.5 text-sm rounded bg-primary text-primary-foreground hover:opacity-90">保存</button>
+        </div>
+      </header>
+
+      <div class="p-8 max-w-7xl">
+        <!-- Page title -->
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h1 class="text-2xl font-semibold">编辑 Mock 接口</h1>
+            <p class="text-sm text-muted-foreground mt-1">修改 <code class="text-xs bg-muted px-1.5 py-0.5 rounded">user-detail</code> 的定义和响应模板</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent">
+              <span data-icon="&#xe6c8;"></span>
+              实时预览
+            </button>
+            <button class="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent">
+              <span data-icon="&#xe6f4;"></span>
+              复制 URL
+            </button>
+          </div>
+        </div>
+
+        <!-- URL preview banner -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-6 flex items-center gap-3 text-sm">
+          <span data-icon="&#xe6c8;" class="text-blue-600 text-lg"></span>
+          <div class="flex-1">
+            <div class="text-blue-900 font-medium">Mock 接口地址</div>
+            <code class="text-blue-700 text-xs">http://localhost:3000/mock/<strong>user-detail</strong></code>
+            <span class="text-blue-600 text-xs ml-2">· 支持 GET / POST</span>
+          </div>
+          <span class="inline-flex items-center gap-1 text-xs text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>已启用</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-6">
+          <!-- Left: Form -->
+          <div class="col-span-2 space-y-6">
+            <!-- 基本信息 -->
+            <section class="bg-background border border-border rounded-lg">
+              <div class="px-5 py-3 border-b border-border">
+                <h2 class="font-medium">基本信息</h2>
+                <p class="text-xs text-muted-foreground mt-0.5">接口的基本标识和分类信息</p>
+              </div>
+              <div class="p-5 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5">接口名称 <span class="text-destructive">*</span></label>
+                    <input type="text" value="用户详情" class="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5">唯一标识 <span class="text-destructive">*</span></label>
+                    <div class="flex items-center">
+                      <span class="px-3 py-2 bg-muted border border-r-0 border-border rounded-l-md text-xs text-muted-foreground font-mono">/mock/</span>
+                      <input type="text" value="user-detail" class="flex-1 px-3 py-2 border border-border rounded-r-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                    </div>
+                    <div class="text-xs text-success mt-1">✓ 该标识可用</div>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1.5">描述</label>
+                  <textarea rows="2" class="w-full px-3 py-2 border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="简要说明接口用途">根据 ID 获取用户完整信息</textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5">支持请求方法</label>
+                    <div class="flex items-center gap-2 px-3 py-2 border border-border rounded-md bg-muted/40">
+                      <span class="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">GET</span>
+                      <span class="px-1.5 py-0.5 bg-green-50 text-green-700 rounded text-xs">POST</span>
+                      <span class="ml-auto text-xs text-muted-foreground">所有 Mock 接口统一支持</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-1.5">状态</label>
+                    <div class="flex items-center gap-2 px-3 py-2 border border-border rounded-md">
+                      <div class="w-9 h-5 bg-primary rounded-full relative cursor-pointer">
+                        <div class="absolute top-0.5 right-0.5 w-4 h-4 bg-white rounded-full shadow"></div>
+                      </div>
+                      <span class="text-sm">已启用</span>
+                      <span class="ml-auto text-xs text-muted-foreground">禁用后该接口请求返回 404</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- Thrift 结构 -->
+            <section class="bg-background border border-border rounded-lg">
+              <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+                <div>
+                  <h2 class="font-medium">Thrift 结构定义</h2>
+                  <p class="text-xs text-muted-foreground mt-0.5">编辑 Thrift 内容后点击「生成 JSON 模板」同步下方响应模板</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button class="text-xs text-muted-foreground hover:text-foreground">导入 .thrift 文件</button>
+                </div>
+              </div>
+              <div class="p-5 space-y-3">
+                <!-- 紧凑的文件信息条 -->
+                <div class="flex items-center gap-2 text-xs">
+                  <span data-icon="&#xe6e3;" class="text-muted-foreground"></span>
+                  <span class="font-mono">UserDetail.thrift</span>
+                  <span class="inline-flex items-center gap-1 text-success"><span class="w-1.5 h-1.5 rounded-full bg-success"></span>已解析 · 6 个字段 · 1 个嵌套结构</span>
+                  <span class="ml-auto text-muted-foreground">13 行</span>
+                </div>
+
+                <!-- 可编辑 Thrift 文本框 -->
+                <div class="border border-border rounded-md overflow-hidden">
+                  <div class="bg-muted px-3 py-1.5 text-xs text-muted-foreground border-b border-border flex items-center gap-2">
+                    <span class="px-1.5 py-0.5 bg-background border border-border rounded text-[10px]">Thrift</span>
+                    <span class="ml-auto font-mono">UserDetail.thrift · 行 1, 列 1</span>
+                  </div>
+                  <textarea
+                    class="editor w-full text-xs font-mono p-3 focus:outline-none resize-y border-0 block"
+                    rows="16"
+                    spellcheck="false"
+                  >namespace java com.mock.user
+
+struct UserDetail {
+  1: required string id
+  2: required string username
+  3: optional string nickname
+  4: required string email
+  5: required i32 age
+  6: optional list&lt;Address&gt; addresses
+}
+
+struct Address {
+  1: required string province
+  2: required string city
+  3: required string detail
+}</textarea>
+                </div>
+
+                <!-- 生成按钮区 -->
+                <div class="flex items-center justify-between pt-1">
+                  <span class="text-xs text-muted-foreground">修改 Thrift 后点击右侧按钮同步下方 JSON 响应模板</span>
+                  <div class="flex items-center gap-2">
+                    <button class="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent">撤销修改</button>
+                    <button class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90">
+                      <span data-icon="&#xe6c8;"></span>
+                      生成 JSON 模板
+                    </button>
+                  </div>
+                </div>
+
+                <!-- 上次生成状态 -->
+                <div class="flex items-center gap-1.5 text-xs text-success pt-2 border-t border-border">
+                  <span class="w-1.5 h-1.5 rounded-full bg-success"></span>
+                  上次生成于 11:45:22 · 6 个顶层字段 · 1 个嵌套 struct
+                </div>
+              </div>
+            </section>
+
+            <!-- JSON 模板 -->
+            <section class="bg-background border border-border rounded-lg">
+              <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+                <div>
+                  <h2 class="font-medium">JSON 响应模板 <span class="text-destructive">*</span></h2>
+                  <p class="text-xs text-muted-foreground mt-0.5">已根据 Thrift 自动生成 · 可继续编辑添加字段、调整占位符</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="text-muted-foreground">占位符：</span>
+                  <span class="text-success">8 合法</span>
+                  <span class="text-muted-foreground">·</span>
+                  <span class="text-success">0 未知</span>
+                  <button class="ml-2 px-2 py-1 border border-border rounded hover:bg-accent">格式化</button>
+                  <button class="px-2 py-1 border border-border rounded hover:bg-accent">从 Thrift 重新生成</button>
+                </div>
+              </div>
+              <div class="p-5">
+                <div class="border border-border rounded-md overflow-hidden">
+                  <div class="bg-muted px-3 py-1.5 text-xs text-muted-foreground border-b border-border flex items-center gap-2">
+                    <span class="px-1.5 py-0.5 bg-background border border-border rounded text-[10px]">JSON</span>
+                    <span class="text-muted-foreground">来自 Thrift: UserDetail</span>
+                    <span class="ml-auto font-mono">11 行 · 1 list</span>
+                  </div>
+                  <textarea
+                    class="editor w-full text-xs font-mono p-3 focus:outline-none resize-y border-0 block"
+                    rows="14"
+                    spellcheck="false"
+                  >{
+  "id": "@uuid",
+  "username": "@string(6,12)",
+  "nickname": "@cname",
+  "email": "@email",
+  "age": "@integer(18,60)",
+  "addresses": [
+    {
+      "province": "@province",
+      "city": "@city",
+      "detail": "@string(10,30)"
+    }
+  ]
+}</textarea>
+                </div>
+                <div class="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
+                  <span data-icon="&#xe6c8;"></span>
+                  提示：在数组字段上使用占位符时，系统会按全局「数组默认长度」或本接口「数组长度覆盖」生成数组项 · 右侧占位符面板可点击插入
+                </div>
+              </div>
+            </section>
+
+            <!-- 高级配置 -->
+            <section class="bg-background border border-border rounded-lg">
+              <div class="px-5 py-3 border-b border-border">
+                <h2 class="font-medium">高级配置</h2>
+                <p class="text-xs text-muted-foreground mt-0.5">模拟真实环境：延迟、错误、状态码</p>
+              </div>
+              <div class="p-5 grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1.5">响应状态码</label>
+                  <input type="number" value="200" min="100" max="599" class="w-full px-3 py-2 border border-border rounded-md text-sm font-mono" />
+                  <div class="text-xs text-muted-foreground mt-1">默认 200</div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1.5">数组长度覆盖</label>
+                  <div class="flex items-center gap-2">
+                    <input type="number" value="2" min="1" max="100" class="w-full px-3 py-2 border border-border rounded-md text-sm font-mono" placeholder="留空使用全局" />
+                    <span class="text-xs text-muted-foreground whitespace-nowrap">· 全局: 3</span>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1.5">模拟延迟（毫秒）</label>
+                  <input type="number" value="0" min="0" max="10000" class="w-full px-3 py-2 border border-border rounded-md text-sm font-mono" />
+                  <div class="text-xs text-muted-foreground mt-1">0 表示无延迟</div>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1.5">错误率 (%)</label>
+                  <input type="number" value="0" min="0" max="100" step="0.1" class="w-full px-3 py-2 border border-border rounded-md text-sm font-mono" />
+                  <div class="text-xs text-muted-foreground mt-1">命中后返回 500</div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- Right: Placeholders + Preview -->
+          <div class="space-y-6">
+            <!-- Preview -->
+            <section class="bg-background border border-border rounded-lg sticky top-20">
+              <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+                <h2 class="font-medium text-sm">实时预览</h2>
+                <button class="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                  <span data-icon="&#xe6c8;"></span>
+                  重新生成
+                </button>
+              </div>
+              <div class="p-3">
+                <div class="flex items-center gap-2 mb-2 text-xs">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-success/10 text-success rounded">
+                    <span class="w-1.5 h-1.5 rounded-full bg-success"></span>200
+                  </span>
+                  <span class="text-muted-foreground">12 ms · 387 B</span>
+                </div>
+                <pre class="editor text-xs p-3 rounded border border-border overflow-auto max-h-96"><code><span class="json-bracket">{</span>
+  <span class="json-key">"id"</span>: <span class="json-string">"a3f9c1d2-7b8e-4f0a-9c1d-2e3f4a5b6c7d"</span>,
+  <span class="json-key">"username"</span>: <span class="json-string">"uXk9pL2v"</span>,
+  <span class="json-key">"nickname"</span>: <span class="json-string">"李建国"</span>,
+  <span class="json-key">"email"</span>: <span class="json-string">"jianguo.li@example.com"</span>,
+  <span class="json-key">"age"</span>: <span class="json-number">34</span>,
+  <span class="json-key">"addresses"</span>: <span class="json-bracket">[</span>
+    <span class="json-bracket">{</span>
+      <span class="json-key">"province"</span>: <span class="json-string">"广东省"</span>,
+      <span class="json-key">"city"</span>: <span class="json-string">"深圳市"</span>,
+      <span class="json-key">"detail"</span>: <span class="json-string">"南山区科技园路 88 号 3 栋 1502 室"</span>
+    <span class="json-bracket">}</span>,
+    <span class="json-bracket">{</span>
+      <span class="json-key">"province"</span>: <span class="json-string">"北京市"</span>,
+      <span class="json-key">"city"</span>: <span class="json-string">"海淀区"</span>,
+      <span class="json-key">"detail"</span>: <span class="json-string">"中关村大街 1 号 5 号楼"</span>
+    <span class="json-bracket">}</span>
+  <span class="json-bracket">]</span>
+<span class="json-bracket">}</span></code></pre>
+                <button class="mt-2 w-full px-3 py-1.5 text-xs border border-border rounded-md hover:bg-accent flex items-center justify-center gap-1">
+                  <span data-icon="&#xe6f4;"></span>
+                  复制响应
+                </button>
+              </div>
+            </section>
+
+            <!-- Placeholder helper -->
+            <section class="bg-background border border-border rounded-lg">
+              <div class="px-5 py-3 border-b border-border">
+                <h2 class="font-medium text-sm">Mock.js 占位符</h2>
+                <p class="text-xs text-muted-foreground mt-0.5">点击插入到光标位置</p>
+              </div>
+              <div class="p-3 max-h-96 overflow-auto text-xs space-y-3">
+                <div>
+                  <div class="text-muted-foreground font-medium mb-1.5">基础</div>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="placeholder cursor-pointer">@boolean</code>
+                    <code class="placeholder cursor-pointer">@integer(1,100)</code>
+                    <code class="placeholder cursor-pointer">@float(0,100,2,3)</code>
+                    <code class="placeholder cursor-pointer">@string(5,10)</code>
+                    <code class="placeholder cursor-pointer">@date('yyyy-MM-dd')</code>
+                    <code class="placeholder cursor-pointer">@datetime</code>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted-foreground font-medium mb-1.5">中文文本</div>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="placeholder cursor-pointer">@cname</code>
+                    <code class="placeholder cursor-pointer">@ctitle</code>
+                    <code class="placeholder cursor-pointer">@cword</code>
+                    <code class="placeholder cursor-pointer">@csentence</code>
+                    <code class="placeholder cursor-pointer">@cparagraph</code>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted-foreground font-medium mb-1.5">地址</div>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="placeholder cursor-pointer">@province</code>
+                    <code class="placeholder cursor-pointer">@city</code>
+                    <code class="placeholder cursor-pointer">@county</code>
+                    <code class="placeholder cursor-pointer">@zip</code>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted-foreground font-medium mb-1.5">网络</div>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="placeholder cursor-pointer">@email</code>
+                    <code class="placeholder cursor-pointer">@url</code>
+                    <code class="placeholder cursor-pointer">@ip</code>
+                    <code class="placeholder cursor-pointer">@domain</code>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted-foreground font-medium mb-1.5">ID</div>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="placeholder cursor-pointer">@id</code>
+                    <code class="placeholder cursor-pointer">@uuid</code>
+                  </div>
+                </div>
+                <div>
+                  <div class="text-muted-foreground font-medium mb-1.5">图片</div>
+                  <div class="flex flex-wrap gap-1">
+                    <code class="placeholder cursor-pointer">@image</code>
+                    <code class="placeholder cursor-pointer">@dataImage</code>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

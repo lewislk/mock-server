@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JSON → Thrift - Mock Server</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            border: 'hsl(220 13% 91%)',
+            background: 'hsl(0 0% 100%)',
+            foreground: 'hsl(222 47% 11%)',
+            muted: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(215 16% 47%)' },
+            primary: { DEFAULT: 'hsl(222 47% 11%)', foreground: 'hsl(0 0% 100%)' },
+            accent: { DEFAULT: 'hsl(210 40% 96%)', foreground: 'hsl(222 47% 11%)' },
+            destructive: { DEFAULT: 'hsl(0 84% 60%)', foreground: 'hsl(0 0% 100%)' },
+            success: 'hsl(142 71% 45%)',
+          },
+          borderRadius: { lg: '0.5rem', md: '0.375rem' },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lucide-static@latest/font/lucide.css" />
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    code, pre { font-family: "SF Mono", Monaco, Menlo, Consolas, "Courier New", monospace; }
+    [data-icon]::before { content: attr(data-icon); font-family: "lucide" !important; font-style: normal; }
+    .nav-item-active { background: hsl(222 47% 11%); color: white; }
+    .thrift-key { color: hsl(280 60% 45%); font-weight: 600; }
+    .thrift-type { color: hsl(220 70% 45%); }
+    .thrift-comment { color: hsl(215 16% 47%); font-style: italic; }
+    .thrift-string { color: hsl(14 80% 40%); }
+    .editor { background: hsl(220 14% 96%); }
+  </style>
+</head>
+<body class="bg-slate-50 text-foreground min-h-screen">
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside class="w-60 bg-background border-r border-border min-h-screen fixed left-0 top-0 flex flex-col">
+      <div class="px-6 py-5 border-b border-border">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-md bg-primary text-primary-foreground flex items-center justify-center font-bold">M</div>
+          <div>
+            <div class="font-semibold text-sm">Mock Server</div>
+            <div class="text-xs text-muted-foreground">内部测试平台</div>
+          </div>
+        </div>
+      </div>
+      <nav class="p-3 space-y-1 text-sm flex-1">
+        <a href="list.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe929;" class="text-base text-muted-foreground"></span>
+          <span>Mock 接口</span>
+          <span class="ml-auto text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">42</span>
+        </a>
+        <a href="converter.html" class="nav-item-active flex items-center gap-3 px-3 py-2 rounded-md">
+          <span data-icon="&#xe6a8;" class="text-base"></span>
+          <span>JSON → Thrift</span>
+        </a>
+        <a href="settings.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe64e;" class="text-base text-muted-foreground"></span>
+          <span>全局配置</span>
+        </a>
+        <a href="preview.html" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6c8;" class="text-base text-muted-foreground"></span>
+          <span>快速预览</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe6b1;" class="text-base text-muted-foreground"></span>
+          <span>请求日志</span>
+        </a>
+        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent">
+          <span data-icon="&#xe72c;" class="text-base text-muted-foreground"></span>
+          <span>使用文档</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="ml-60 flex-1 min-h-screen">
+      <header class="sticky top-0 z-10 bg-background border-b border-border px-8 py-3 flex items-center gap-4">
+        <div class="text-sm text-muted-foreground">
+          <span>JSON → Thrift</span>
+        </div>
+        <div class="ml-auto flex items-center gap-2">
+          <button class="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent inline-flex items-center gap-1">
+            <span data-icon="&#xe6e3;"></span>
+            上传 JSON
+          </button>
+          <button class="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent inline-flex items-center gap-1">
+            <span data-icon="&#xe709;"></span>
+            加载示例
+          </button>
+        </div>
+      </header>
+
+      <div class="p-8 max-w-7xl">
+        <div class="mb-6">
+          <h1 class="text-2xl font-semibold">JSON → Thrift 转换</h1>
+          <p class="text-sm text-muted-foreground mt-1">粘贴 JSON 数据，自动推断并生成对应的 Thrift 结构定义文件</p>
+        </div>
+
+        <!-- Config bar -->
+        <div class="bg-background border border-border rounded-lg mb-6 p-4 flex items-center gap-6 flex-wrap">
+          <div class="flex items-center gap-2 text-sm">
+            <span class="text-muted-foreground">命名空间：</span>
+            <input type="text" value="com.mock.generated" class="px-2 py-1 border border-border rounded text-xs font-mono w-56" />
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <span class="text-muted-foreground">根结构名：</span>
+            <input type="text" value="RootResponse" class="px-2 py-1 border border-border rounded text-xs font-mono w-32" />
+          </div>
+          <div class="flex items-center gap-2 text-sm">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="checkbox" checked class="rounded" />
+              <span>所有字段 optional</span>
+            </label>
+          </div>
+          <div class="ml-auto flex items-center gap-2">
+            <button class="px-4 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:opacity-90 inline-flex items-center gap-1">
+              <span data-icon="&#xe6a8;"></span>
+              转换
+            </button>
+          </div>
+        </div>
+
+        <!-- Two-column layout -->
+        <div class="grid grid-cols-2 gap-6">
+          <!-- Left: JSON input -->
+          <section class="bg-background border border-border rounded-lg">
+            <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+              <div>
+                <h2 class="font-medium">JSON 输入</h2>
+                <p class="text-xs text-muted-foreground mt-0.5">支持任意嵌套结构</p>
+              </div>
+              <span class="text-xs text-success">✓ 合法 JSON</span>
+            </div>
+            <textarea
+              class="editor w-full text-xs font-mono p-4 focus:outline-none border-0 resize-none"
+              rows="22"
+            >{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "id": "u-12345",
+    "username": "jianguo",
+    "nickname": "李建国",
+    "email": "jianguo@example.com",
+    "age": 34,
+    "avatar": "https://cdn.example.com/avatar/1.png",
+    "verified": true,
+    "balance": 1234.56,
+    "tags": ["vip", "new"],
+    "createdAt": "2026-09-30 11:42:18",
+    "addresses": [
+      {
+        "province": "广东省",
+        "city": "深圳市",
+        "detail": "南山区科技园路 88 号",
+        "zip": "518000"
+      }
+    ]
+  }
+}</textarea>
+          </section>
+
+          <!-- Right: Thrift output -->
+          <section class="bg-background border border-border rounded-lg">
+            <div class="px-5 py-3 border-b border-border flex items-center justify-between">
+              <div>
+                <h2 class="font-medium">Thrift 输出</h2>
+                <p class="text-xs text-muted-foreground mt-0.5">可下载或导入到 Mock 接口</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="px-2 py-1 text-xs border border-border rounded hover:bg-accent inline-flex items-center gap-1">
+                  <span data-icon="&#xe6f4;"></span>
+                  复制
+                </button>
+                <button class="px-2 py-1 text-xs border border-border rounded hover:bg-accent inline-flex items-center gap-1">
+                  <span data-icon="&#xe709;"></span>
+                  下载
+                </button>
+                <button class="px-2 py-1 text-xs bg-primary text-primary-foreground rounded hover:opacity-90 inline-flex items-center gap-1">
+                  <span data-icon="&#xe8a4;"></span>
+                  导入 Mock
+                </button>
+              </div>
+            </div>
+
+            <!-- Type inference summary -->
+            <div class="px-5 py-3 border-b border-border bg-muted/30">
+              <div class="text-xs text-muted-foreground mb-2">类型推断结果 · 推断 12 个字段</div>
+              <div class="flex flex-wrap gap-1.5 text-xs">
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-mono">code → <strong>i32</strong></span>
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-mono">message → <strong>string</strong></span>
+                <span class="px-2 py-0.5 bg-purple-50 text-purple-700 rounded font-mono">data → <strong>struct</strong></span>
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-mono">id → <strong>string</strong></span>
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-mono">username → <strong>string</strong></span>
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-mono">nickname → <strong>string</strong></span>
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-mono">email → <strong>string</strong></span>
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-mono">age → <strong>i32</strong></span>
+                <span class="px-2 py-0.5 bg-blue-50 text-blue-700 rounded font-mono">avatar → <strong>string</strong></span>
+                <span class="px-2 py-0.5 bg-green-50 text-green-700 rounded font-mono">verified → <strong>bool</strong></span>
+                <span class="px-2 py-0.5 bg-orange-50 text-orange-700 rounded font-mono">balance → <strong>double</strong></span>
+                <span class="px-2 py-0.5 bg-pink-50 text-pink-700 rounded font-mono">tags → <strong>list&lt;string&gt;</strong></span>
+                <span class="px-2 py-0.5 bg-pink-50 text-pink-700 rounded font-mono">addresses → <strong>list&lt;Address&gt;</strong></span>
+              </div>
+            </div>
+
+            <pre class="editor text-xs p-5 overflow-auto"><code><span class="thrift-comment">// Generated by Mock Server · 2026-09-30 11:45:22
+// 源 JSON 包含 13 个顶层字段、2 个嵌套结构</span>
+
+<span class="thrift-key">namespace</span> java com.mock.generated
+
+<span class="thrift-key">struct</span> <span class="thrift-type">RootResponse</span> {
+  <span class="thrift-comment">1: optional i32 code</span>
+  1: <span class="thrift-key">optional</span> <span class="thrift-type">i32</span> code
+  2: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> message
+  3: <span class="thrift-key">optional</span> <span class="thrift-type">Data</span> data
+}
+
+<span class="thrift-key">struct</span> <span class="thrift-type">Data</span> {
+  1: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> id
+  2: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> username
+  3: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> nickname
+  4: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> email
+  5: <span class="thrift-key">optional</span> <span class="thrift-type">i32</span> age
+  6: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> avatar
+  7: <span class="thrift-key">optional</span> <span class="thrift-type">bool</span> verified
+  8: <span class="thrift-key">optional</span> <span class="thrift-type">double</span> balance
+  9: <span class="thrift-key">optional</span> <span class="thrift-type">list&lt;string&gt;</span> tags
+  10: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> createdAt
+  11: <span class="thrift-key">optional</span> <span class="thrift-type">list&lt;Address&gt;</span> addresses
+}
+
+<span class="thrift-key">struct</span> <span class="thrift-type">Address</span> {
+  1: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> province
+  2: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> city
+  3: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> detail
+  4: <span class="thrift-key">optional</span> <span class="thrift-type">string</span> zip
+}</code></pre>
+          </section>
+        </div>
+
+        <!-- Inference rules -->
+        <section class="bg-background border border-border rounded-lg mt-6">
+          <div class="px-5 py-3 border-b border-border">
+            <h2 class="font-medium">类型推断规则</h2>
+            <p class="text-xs text-muted-foreground mt-0.5">JSON 类型如何映射到 Thrift 类型</p>
+          </div>
+          <div class="p-5">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="text-left text-xs text-muted-foreground border-b border-border">
+                  <th class="pb-2 font-medium">JSON</th>
+                  <th class="pb-2 font-medium">示例值</th>
+                  <th class="pb-2 font-medium">Thrift</th>
+                  <th class="pb-2 font-medium">说明</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border text-xs">
+                <tr>
+                  <td class="py-2 font-mono">string</td>
+                  <td class="py-2 font-mono text-muted-foreground">"hello"</td>
+                  <td class="py-2 font-mono text-blue-700">string</td>
+                  <td class="py-2 text-muted-foreground">直接映射</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-mono">integer</td>
+                  <td class="py-2 font-mono text-muted-foreground">42</td>
+                  <td class="py-2 font-mono text-blue-700">i32</td>
+                  <td class="py-2 text-muted-foreground">取值范围在 i32 内时</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-mono">integer</td>
+                  <td class="py-2 font-mono text-muted-foreground">9007199254740993</td>
+                  <td class="py-2 font-mono text-blue-700">i64</td>
+                  <td class="py-2 text-muted-foreground">超出 i32 范围</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-mono">number</td>
+                  <td class="py-2 font-mono text-muted-foreground">3.14</td>
+                  <td class="py-2 font-mono text-blue-700">double</td>
+                  <td class="py-2 text-muted-foreground">含小数部分</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-mono">boolean</td>
+                  <td class="py-2 font-mono text-muted-foreground">true</td>
+                  <td class="py-2 font-mono text-green-700">bool</td>
+                  <td class="py-2 text-muted-foreground">直接映射</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-mono">array</td>
+                  <td class="py-2 font-mono text-muted-foreground">[...]</td>
+                  <td class="py-2 font-mono text-pink-700">list&lt;T&gt;</td>
+                  <td class="py-2 text-muted-foreground">T 由元素类型推断（取第一个）</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-mono">object</td>
+                  <td class="py-2 font-mono text-muted-foreground">{...}</td>
+                  <td class="py-2 font-mono text-purple-700">struct T</td>
+                  <td class="py-2 text-muted-foreground">嵌套结构生成新 struct，名字取自字段名</td>
+                </tr>
+                <tr>
+                  <td class="py-2 font-mono">null</td>
+                  <td class="py-2 font-mono text-muted-foreground">null</td>
+                  <td class="py-2 font-mono text-blue-700">optional&lt;string&gt;</td>
+                  <td class="py-2 text-muted-foreground">无类型信息时默认推断为 string</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

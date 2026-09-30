@@ -1,0 +1,73 @@
+// Prisma schema for Mock Server
+// 文档：AGENTS.md §4.2 / PRD §5.2
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// Mock 接口定义表
+/// 注意：v1 所有接口统一支持 GET/POST，因此不存 methods 列；
+/// tags 列也在 v1 中去掉，仅保留 description 作为自由文本。
+model mock_interface {
+  id           BigInt   @id @default(autoincrement())
+  name         String   @db.VarChar(128)
+  identifier   String   @unique @db.VarChar(64)
+  description  String?  @db.VarChar(512)
+  status       Int      @default(1) // 1=启用 0=禁用
+  thrift_def   String?  @db.MediumText
+  json_template String  @db.MediumText
+  array_length Int?
+  status_code  Int      @default(200)
+  delay_ms     Int      @default(0)
+  error_rate   Decimal  @default(0) @db.Decimal(5, 2)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt @default(now())
+
+  @@index([name], name: "idx_name")
+  @@index([status], name: "idx_status")
+  @@index([updated_at], name: "idx_updated")
+  @@map("mock_interface")
+}
+
+/// 全局配置（key-value）
+model global_config {
+  config_key   String   @id @db.VarChar(64)
+  config_value String   @db.Text
+  description  String?  @db.VarChar(256)
+  updated_at   DateTime @updatedAt @default(now())
+
+  @@map("global_config")
+}
+
+/// mock 接口请求日志
+model mock_request_log {
+  id           BigInt   @id @default(autoincrement())
+  interface_id BigInt?
+  identifier   String   @db.VarChar(64)
+  method       String   @db.VarChar(10)
+  status_code  Int
+  duration_ms  Int
+  client_ip    String?  @db.VarChar(45)
+  created_at   DateTime @default(now())
+
+  @@index([interface_id], name: "idx_interface")
+  @@index([created_at], name: "idx_created")
+  @@map("mock_request_log")
+}
+
+/// 操作日志（v1 可选；供关键操作追溯）
+model operation_log {
+  id            BigInt   @id @default(autoincrement())
+  action        String   @db.VarChar(32)
+  resource_type String   @db.VarChar(32)
+  resource_id   BigInt?
+  detail        Json?
+  created_at    DateTime @default(now())
+
+  @@map("operation_log")
+}
